@@ -1,390 +1,343 @@
+// Constants
+const CONSTANTS = {
+    MAX_HISTORY: 10,
+    NOTIFICATION_DURATION: 3000
+};
+
+// DOM Element IDs
+const DOM_IDS = {
+    editor: 'editor',
+    pasteBtn: 'paste-btn',
+    copyBtn: 'copy-btn',
+    clearBtn: 'clear-btn',
+    selectAllBtn: 'select-all-btn',
+    undoBtn: 'undo-btn',
+    redoBtn: 'redo-btn',
+    searchBtn: 'search-btn',
+    statsBar: 'stats-bar',
+    notification: 'notification',
+    notificationMessage: 'notification-message',
+    searchPanel: 'search-replace-panel',
+    closeSearchPanelBtn: 'close-search-panel-btn',
+    searchInput: 'search-input',
+    replaceInput: 'replace-input',
+    caseSensitiveCheckbox: 'case-sensitive-checkbox',
+    findPrevBtn: 'find-prev-btn',
+    findNextBtn: 'find-next-btn',
+    replaceBtn: 'replace-btn',
+    replaceAllBtn: 'replace-all-btn'
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements Helper
+    const getElement = (id) => document.getElementById(id);
+    
     // --- DOM Elements ---
-    const editor = document.getElementById('editor');
-    const pasteBtn = document.getElementById('paste-btn');
-    const copyBtn = document.getElementById('copy-btn');
-    const clearBtn = document.getElementById('clear-btn');
-    const selectAllBtn = document.getElementById('select-all-btn');
-    const undoBtn = document.getElementById('undo-btn');
-    const redoBtn = document.getElementById('redo-btn');
-    const searchBtn = document.getElementById('search-btn');
-    const statsBar = document.getElementById('stats-bar');
-    const notification = document.getElementById('notification');
-    const notificationMessage = document.getElementById('notification-message');
-
-    // Search Panel Elements
-    const searchPanel = document.getElementById('search-replace-panel');
-    const closeSearchPanelBtn = document.getElementById('close-search-panel-btn');
-    const searchInput = document.getElementById('search-input');
-    const replaceInput = document.getElementById('replace-input');
-    const caseSensitiveCheckbox = document.getElementById('case-sensitive-checkbox');
-    const findPrevBtn = document.getElementById('find-prev-btn');
-    const findNextBtn = document.getElementById('find-next-btn');
-    const replaceBtn = document.getElementById('replace-btn');
-    const replaceAllBtn = document.getElementById('replace-all-btn');
-
-    // --- State ---
-    const MAX_HISTORY = 10;
-    let undoHistory = [];
-    let redoHistory = [];
-    let isUndoing = false;
-    let isRedoing = false;
-
-    // --- History Management ---
-    const updateButtonState = () => {
-        undoBtn.disabled = undoHistory.length <= 1;
-        redoBtn.disabled = redoHistory.length === 0;
+    const elements = {
+        editor: getElement(DOM_IDS.editor),
+        pasteBtn: getElement(DOM_IDS.pasteBtn),
+        copyBtn: getElement(DOM_IDS.copyBtn),
+        clearBtn: getElement(DOM_IDS.clearBtn),
+        selectAllBtn: getElement(DOM_IDS.selectAllBtn),
+        undoBtn: getElement(DOM_IDS.undoBtn),
+        redoBtn: getElement(DOM_IDS.redoBtn),
+        searchBtn: getElement(DOM_IDS.searchBtn),
+        statsBar: getElement(DOM_IDS.statsBar),
+        notification: getElement(DOM_IDS.notification),
+        notificationMessage: getElement(DOM_IDS.notificationMessage),
+        searchPanel: getElement(DOM_IDS.searchPanel),
+        closeSearchPanelBtn: getElement(DOM_IDS.closeSearchPanelBtn),
+        searchInput: getElement(DOM_IDS.searchInput),
+        replaceInput: getElement(DOM_IDS.replaceInput),
+        caseSensitiveCheckbox: getElement(DOM_IDS.caseSensitiveCheckbox),
+        findPrevBtn: getElement(DOM_IDS.findPrevBtn),
+        findNextBtn: getElement(DOM_IDS.findNextBtn),
+        replaceBtn: getElement(DOM_IDS.replaceBtn),
+        replaceAllBtn: getElement(DOM_IDS.replaceAllBtn)
     };
 
-    const recordHistory = (force = false) => {
-        if (isUndoing || isRedoing) return;
-        const currentText = editor.value;
-        const lastHistory = undoHistory[undoHistory.length - 1];
-
-        if (force || lastHistory !== currentText) {
-            undoHistory.push(currentText);
-            if (undoHistory.length > MAX_HISTORY + 1) {
-                undoHistory.shift();
-            }
-            redoHistory = [];
-            updateButtonState();
+    // --- History Manager ---
+    class HistoryManager {
+        constructor(editor, undoBtn, redoBtn) {
+            this.editor = editor;
+            this.undoBtn = undoBtn;
+            this.redoBtn = redoBtn;
+            this.undoHistory = [];
+            this.redoHistory = [];
+            this.isUndoing = false;
+            this.isRedoing = false;
         }
-    };
+        
+        updateButtonState() {
+            this.undoBtn.disabled = this.undoHistory.length <= 1;
+            this.redoBtn.disabled = this.redoHistory.length === 0;
+        }
+        
+        record(force = false) {
+            if (this.isUndoing || this.isRedoing) return;
+            const currentText = this.editor.value;
+            const lastHistory = this.undoHistory[this.undoHistory.length - 1];
+
+            if (force || lastHistory !== currentText) {
+                this.undoHistory.push(currentText);
+                if (this.undoHistory.length > CONSTANTS.MAX_HISTORY + 1) {
+                    this.undoHistory.shift();
+                }
+                this.redoHistory = [];
+                this.updateButtonState();
+            }
+        }
+        
+        undo() {
+            if (this.undoHistory.length > 1) {
+                this.isUndoing = true;
+                this.redoHistory.push(this.undoHistory.pop());
+                this.editor.value = this.undoHistory[this.undoHistory.length - 1];
+                this.updateButtonState();
+                this.isUndoing = false;
+                return true;
+            }
+            return false;
+        }
+        
+        redo() {
+            if (this.redoHistory.length > 0) {
+                this.isRedoing = true;
+                const nextState = this.redoHistory.pop();
+                this.undoHistory.push(nextState);
+                this.editor.value = nextState;
+                this.updateButtonState();
+                this.isRedoing = false;
+                return true;
+            }
+            return false;
+        }
+        
+        init() {
+            this.undoHistory.push(this.editor.value);
+            this.updateButtonState();
+        }
+    }
+    
+    const historyManager = new HistoryManager(elements.editor, elements.undoBtn, elements.redoBtn);
 
     // --- Stats ---
     const updateStats = () => {
-        const text = editor.value;
+        const text = elements.editor.value;
         const charCount = text.length;
         const lineCount = text.split('\n').filter(Boolean).length || (text.length > 0 ? 1 : 0);
-        statsBar.innerHTML = `<span>文字数: ${charCount}</span><span>行数: ${lineCount}</span>`;
+        elements.statsBar.innerHTML = `<span>文字数: ${charCount}</span><span>行数: ${lineCount}</span>`;
     };
 
-    editor.addEventListener('input', () => {
+    elements.editor.addEventListener('input', () => {
         updateStats();
-        recordHistory();
+        historyManager.record();
     });
 
-    // --- Notifications ---
-    const showNotification = (message) => {
-        notificationMessage.textContent = message;
-        notification.classList.add('show');
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
-    };
-
-    // --- Clipboard ---
-    const handlePaste = async () => {
-        try {
-            const text = await navigator.clipboard.readText();
-            editor.value = text;
-            updateStats();
-            recordHistory(true);
-            showNotification('ペーストしました');
-        } catch (err) {
-            console.error('Failed to read clipboard: ', err);
-            showNotification('ペーストに失敗しました。手動でペーストしてください。');
+    // --- Notification Manager ---
+    class NotificationManager {
+        constructor(notificationElement, messageElement) {
+            this.notification = notificationElement;
+            this.messageElement = messageElement;
         }
-    };
-
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(editor.value);
-            showNotification('コピーしました');
-        } catch (err) {
-            console.error('Failed to copy: ', err);
-            editor.select();
-            showNotification('コピーに失敗しました。手動でコピーしてください。');
+        
+        show(message) {
+            this.messageElement.textContent = message;
+            this.notification.classList.add('show');
+            setTimeout(() => {
+                this.notification.classList.remove('show');
+            }, CONSTANTS.NOTIFICATION_DURATION);
         }
-    };
+    }
+    
+    const notificationManager = new NotificationManager(elements.notification, elements.notificationMessage);
 
-    pasteBtn.addEventListener('click', async () => {
-        if (navigator.permissions) {
+    // --- Clipboard Manager ---
+    class ClipboardManager {
+        constructor(editor, notificationManager, historyManager, updateStats) {
+            this.editor = editor;
+            this.notificationManager = notificationManager;
+            this.historyManager = historyManager;
+            this.updateStats = updateStats;
+        }
+        
+        async paste() {
             try {
-                const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
-                if (permissionStatus.state === 'denied') {
-                    showNotification('クリップボードへのアクセスが拒否されています。');
-                    return;
-                }
-                // For 'granted' or 'prompt', proceed to handlePaste()
-                handlePaste();
-            } catch (error) {
-                // Fallback for browsers that don't support the permission query
-                handlePaste();
+                const text = await navigator.clipboard.readText();
+                this.editor.value = text;
+                this.updateStats();
+                this.historyManager.record(true);
+                this.notificationManager.show('ペーストしました');
+            } catch (err) {
+                console.error('Failed to read clipboard: ', err);
+                this.notificationManager.show('ペーストに失敗しました。手動でペーストしてください。');
             }
-        } else {
-            // Fallback for browsers that don't support the Permissions API
-            handlePaste();
         }
-    });
+        
+        async copy() {
+            try {
+                await navigator.clipboard.writeText(this.editor.value);
+                this.notificationManager.show('コピーしました');
+            } catch (err) {
+                console.error('Failed to copy: ', err);
+                this.editor.select();
+                this.notificationManager.show('コピーに失敗しました。手動でコピーしてください。');
+            }
+        }
+        
+        async pasteWithPermissionCheck() {
+            if (navigator.permissions) {
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
+                    if (permissionStatus.state === 'denied') {
+                        this.notificationManager.show('クリップボードへのアクセスが拒否されています。');
+                        return;
+                    }
+                    this.paste();
+                } catch (error) {
+                    this.paste();
+                }
+            } else {
+                this.paste();
+            }
+        }
+    }
+    
+    const clipboardManager = new ClipboardManager(elements.editor, notificationManager, historyManager, updateStats);
 
-    copyBtn.addEventListener('click', handleCopy);
+    elements.pasteBtn.addEventListener('click', () => clipboardManager.pasteWithPermissionCheck());
+    elements.copyBtn.addEventListener('click', () => clipboardManager.copy());
 
     // --- Toolbar Actions ---
-    clearBtn.addEventListener('click', () => {
-        editor.value = '';
+    elements.clearBtn.addEventListener('click', () => {
+        elements.editor.value = '';
         updateStats();
-        recordHistory(true);
-        showNotification('クリアしました');
+        historyManager.record(true);
+        notificationManager.show('クリアしました');
     });
 
-    selectAllBtn.addEventListener('click', () => editor.select());
+    elements.selectAllBtn.addEventListener('click', () => elements.editor.select());
 
-    undoBtn.addEventListener('click', () => {
-        if (undoHistory.length > 1) {
-            isUndoing = true;
-            redoHistory.push(undoHistory.pop());
-            editor.value = undoHistory[undoHistory.length - 1];
+    elements.undoBtn.addEventListener('click', () => {
+        if (historyManager.undo()) {
             updateStats();
-            updateButtonState();
-            isUndoing = false;
         }
     });
 
-    redoBtn.addEventListener('click', () => {
-        if (redoHistory.length > 0) {
-            isRedoing = true;
-            const nextState = redoHistory.pop();
-            undoHistory.push(nextState);
-            editor.value = nextState;
+    elements.redoBtn.addEventListener('click', () => {
+        if (historyManager.redo()) {
             updateStats();
-            updateButtonState();
-            isRedoing = false;
         }
     });
 
-    // --- Search and Replace ---
-    searchBtn.addEventListener('click', () => searchPanel.style.display = 'flex');
-    closeSearchPanelBtn.addEventListener('click', () => searchPanel.style.display = 'none');
-
-    const find = (backward = false) => {
-        const searchTerm = searchInput.value;
-        if (!searchTerm) return;
-
-        const text = editor.value;
-        const isCaseSensitive = caseSensitiveCheckbox.checked;
-        const searchFlags = isCaseSensitive ? '' : 'i';
-
-        const currentPos = backward ? editor.selectionStart : editor.selectionEnd;
-        let searchText = text;
-        if (!isCaseSensitive) {
-            searchText = text.toLowerCase();
-            searchTerm = searchTerm.toLowerCase();
+    // --- Search Manager ---
+    class SearchManager {
+        constructor(editor, searchPanel, searchInput, replaceInput, caseSensitiveCheckbox, notificationManager, historyManager, updateStats) {
+            this.editor = editor;
+            this.searchPanel = searchPanel;
+            this.searchInput = searchInput;
+            this.replaceInput = replaceInput;
+            this.caseSensitiveCheckbox = caseSensitiveCheckbox;
+            this.notificationManager = notificationManager;
+            this.historyManager = historyManager;
+            this.updateStats = updateStats;
         }
-
-        let findPos;
-        if (backward) {
-            findPos = searchText.lastIndexOf(searchTerm, currentPos - 1);
-        } else {
-            findPos = searchText.indexOf(searchTerm, currentPos);
+        
+        show() {
+            this.searchPanel.style.display = 'flex';
         }
-
-        if (findPos !== -1) {
-            editor.focus();
-            editor.setSelectionRange(findPos, findPos + searchTerm.length);
-        } else {
-            showNotification('見つかりませんでした');
+        
+        hide() {
+            this.searchPanel.style.display = 'none';
         }
-    };
+        
+        find(backward = false) {
+            const searchTerm = this.searchInput.value;
+            if (!searchTerm) return;
 
-    findNextBtn.addEventListener('click', () => find());
-    findPrevBtn.addEventListener('click', () => find(true));
+            const text = this.editor.value;
+            const isCaseSensitive = this.caseSensitiveCheckbox.checked;
 
-    replaceBtn.addEventListener('click', () => {
-        const searchTerm = searchInput.value;
-        const replaceTerm = replaceInput.value;
-        if (!searchTerm) return;
-
-        const selectedText = editor.value.substring(editor.selectionStart, editor.selectionEnd);
-        const compareTerm = caseSensitiveCheckbox.checked ? searchTerm : searchTerm.toLowerCase();
-        const compareSelected = caseSensitiveCheckbox.checked ? selectedText : selectedText.toLowerCase();
-
-        if (compareSelected === compareTerm) {
-            const start = editor.selectionStart;
-            editor.setRangeText(replaceTerm, start, editor.selectionEnd, 'end');
-            updateStats();
-            recordHistory(true);
-        }
-        find();
-    });
-
-    replaceAllBtn.addEventListener('click', () => {
-        const searchTerm = searchInput.value;
-        const replaceTerm = replaceInput.value;
-        if (!searchTerm) return;
-
-        const flags = caseSensitiveCheckbox.checked ? 'g' : 'gi';
-        const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\document.addEventListener('DOMContentLoaded', () => {
-    const editor = document.getElementById('editor');
-    const pasteBtn = document.getElementById('paste-btn');
-    const copyBtn = document.getElementById('copy-btn');
-    const clearBtn = document.getElementById('clear-btn');
-    const selectAllBtn = document.getElementById('select-all-btn');
-    const undoBtn = document.getElementById('undo-btn');
-    const redoBtn = document.getElementById('redo-btn');
-    const statsBar = document.getElementById('stats-bar');
-    const notification = document.getElementById('notification');
-    const notificationMessage = document.getElementById('notification-message');
-
-    const MAX_HISTORY = 10;
-    let undoHistory = [];
-    let redoHistory = [];
-    let isUndoing = false;
-    let isRedoing = false;
-
-    // --- 履歴管理 ---
-    const updateButtonState = () => {
-        undoBtn.disabled = undoHistory.length === 0;
-        redoBtn.disabled = redoHistory.length === 0;
-    };
-
-    const recordHistory = () => {
-        if (isUndoing || isRedoing) return;
-        const currentText = editor.value;
-        const lastHistory = undoHistory[undoHistory.length - 1];
-
-        if (lastHistory !== currentText) {
-            undoHistory.push(currentText);
-            if (undoHistory.length > MAX_HISTORY) {
-                undoHistory.shift(); // 古い履歴から削除
+            const currentPos = backward ? this.editor.selectionStart : this.editor.selectionEnd;
+            let searchText = text;
+            let term = searchTerm;
+            
+            if (!isCaseSensitive) {
+                searchText = text.toLowerCase();
+                term = searchTerm.toLowerCase();
             }
-            redoHistory = []; // 新しい操作でRedo履歴はクリア
-            updateButtonState();
-        }
-    };
 
-    // --- 統計情報の更新 ---
-    const updateStats = () => {
-        const text = editor.value;
-        const charCount = text.length;
-        const lineCount = text.split('\n').filter(Boolean).length || (text.length > 0 ? 1 : 0);
-
-        statsBar.innerHTML = `
-            <span>文字数: ${charCount}</span>
-            <span>行数: ${lineCount}</span>
-        `;
-    };
-
-    editor.addEventListener('input', () => {
-        updateStats();
-        recordHistory();
-    });
-
-    // --- 通知の表示 ---
-    const showNotification = (message) => {
-        notificationMessage.textContent = message;
-        notification.classList.add('show');
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
-    };
-
-    // --- クリップボード操作 ---
-    const handlePaste = async () => {
-        try {
-            const text = await navigator.clipboard.readText();
-            editor.value = text;
-            updateStats();
-            recordHistory();
-            showNotification('ペーストしました');
-        } catch (err) {
-            console.error('Failed to read clipboard contents: ', err);
-            showNotification('ペーストに失敗しました。手動でペーストしてください。');
-        }
-    };
-
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(editor.value);
-            showNotification('コピーしました');
-        } catch (err) {
-            console.error('Failed to copy text: ', err);
-            editor.select();
-            showNotification('コピーに失敗しました。テキストを選択しましたので、手動でコピーしてください。');
-        }
-    };
-
-    pasteBtn.addEventListener('click', async () => {
-        if (navigator.permissions) {
-            try {
-                const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
-                if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
-                    handlePaste();
-                }
-            } catch (error) {
-                handlePaste();
+            let findPos;
+            if (backward) {
+                findPos = searchText.lastIndexOf(term, currentPos - 1);
+            } else {
+                findPos = searchText.indexOf(term, currentPos);
             }
-        } else {
-            handlePaste();
+
+            if (findPos !== -1) {
+                this.editor.focus();
+                this.editor.setSelectionRange(findPos, findPos + searchTerm.length);
+            } else {
+                this.notificationManager.show('見つかりませんでした');
+            }
         }
-    });
+        
+        replace() {
+            const searchTerm = this.searchInput.value;
+            const replaceTerm = this.replaceInput.value;
+            if (!searchTerm) return;
 
-    copyBtn.addEventListener('click', handleCopy);
+            const selectedText = this.editor.value.substring(this.editor.selectionStart, this.editor.selectionEnd);
+            const compareTerm = this.caseSensitiveCheckbox.checked ? searchTerm : searchTerm.toLowerCase();
+            const compareSelected = this.caseSensitiveCheckbox.checked ? selectedText : selectedText.toLowerCase();
 
-    // --- ツールバー操作 ---
-    clearBtn.addEventListener('click', () => {
-        editor.value = '';
-        updateStats();
-        recordHistory();
-        showNotification('クリアしました');
-    });
-
-    selectAllBtn.addEventListener('click', () => {
-        editor.select();
-    });
-
-    undoBtn.addEventListener('click', () => {
-        if (undoHistory.length > 1) {
-            isUndoing = true;
-            const currentState = undoHistory.pop();
-            redoHistory.push(currentState);
-            editor.value = undoHistory[undoHistory.length - 1];
-            updateStats();
-            updateButtonState();
-            isUndoing = false;
+            if (compareSelected === compareTerm) {
+                const start = this.editor.selectionStart;
+                this.editor.setRangeText(replaceTerm, start, this.editor.selectionEnd, 'end');
+                this.updateStats();
+                this.historyManager.record(true);
+            }
+            this.find();
         }
-    });
+        
+        replaceAll() {
+            const searchTerm = this.searchInput.value;
+            const replaceTerm = this.replaceInput.value;
+            if (!searchTerm) return;
 
-    redoBtn.addEventListener('click', () => {
-        if (redoHistory.length > 0) {
-            isRedoing = true;
-            const nextState = redoHistory.pop();
-            undoHistory.push(nextState);
-            editor.value = nextState;
-            updateStats();
-            updateButtonState();
-            isRedoing = false;
+            const flags = this.caseSensitiveCheckbox.checked ? 'g' : 'gi';
+            const regex = new RegExp(searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+            const originalText = this.editor.value;
+            const newText = originalText.replace(regex, replaceTerm);
+
+            if (originalText !== newText) {
+                const replacements = (originalText.match(regex) || []).length;
+                this.editor.value = newText;
+                this.updateStats();
+                this.historyManager.record(true);
+                this.notificationManager.show(`${replacements}件を置換しました`);
+            } else {
+                this.notificationManager.show('見つかりませんでした');
+            }
         }
-    });
+    }
+    
+    const searchManager = new SearchManager(
+        elements.editor, elements.searchPanel, elements.searchInput, elements.replaceInput,
+        elements.caseSensitiveCheckbox, notificationManager, historyManager, updateStats
+    );
 
-    // 初期化
-    const init = () => {
-        undoHistory.push(editor.value);
-        updateStats();
-        updateButtonState();
-    };
-
-    init();
-});'), flags);
-        const originalText = editor.value;
-        const newText = originalText.replace(regex, replaceTerm);
-
-        if (originalText !== newText) {
-            const replacements = (originalText.match(regex) || []).length;
-            editor.value = newText;
-            updateStats();
-            recordHistory(true);
-            showNotification(`${replacements}件を置換しました`);
-        } else {
-            showNotification('見つかりませんでした');
-        }
-    });
+    elements.searchBtn.addEventListener('click', () => searchManager.show());
+    elements.closeSearchPanelBtn.addEventListener('click', () => searchManager.hide());
+    elements.findNextBtn.addEventListener('click', () => searchManager.find());
+    elements.findPrevBtn.addEventListener('click', () => searchManager.find(true));
+    elements.replaceBtn.addEventListener('click', () => searchManager.replace());
+    elements.replaceAllBtn.addEventListener('click', () => searchManager.replaceAll());
 
     // --- Init ---
     const init = () => {
-        undoHistory.push(editor.value);
+        historyManager.init();
         updateStats();
-        updateButtonState();
     };
 
     init();
