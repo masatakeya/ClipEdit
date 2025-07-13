@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClipEdit</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="header">
+        <h1 class="header__title">ClipEdit</h1>
+        <div class="header__actions">
+            <button id="paste-btn" class="btn">Paste</button>
+            <button id="copy-btn" class="btn">Copy</button>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div id="editor-container">
+            <textarea id="editor" placeholder="ここにテキストをペースト..."></textarea>
+            <div id="stats-bar" class="stats-bar">
+                <span>文字数: 0</span>
+                <span>行数: 0</span>
+            </div>
+        </div>
+    </main>
+
+    <div class="toolbar">
+        <button id="clear-btn" class="btn">Clear</button>
+        <button id="select-all-btn" class="btn">Select All</button>
+        <button id="undo-btn" class="btn" disabled>Undo</button>
+        <button id="redo-btn" class="btn" disabled>Redo</button>
+        <button id="search-btn" class="btn">Search</button>
+    </div>
+
+    <div id="search-replace-panel" class="search-panel-overlay" style="display: none;">
+        <div class="search-panel">
+            <div class="search-panel__header">
+                <h3>検索・置換</h3>
+                <button id="close-search-panel-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="search-panel__body">
+                <input type="text" id="search-input" placeholder="検索する文字列">
+                <input type="text" id="replace-input" placeholder="置換後の文字列">
+                <div class="search-options">
+                    <label><input type="checkbox" id="case-sensitive-checkbox">大文字/小文字を区別</label>
+                </div>
+                <div class="search-actions">
+                    <button id="find-prev-btn" class="btn">前を検索</button>
+                    <button id="find-next-btn" class="btn">次を検索</button>
+                    <button id="replace-btn" class="btn">置換</button>
+                    <button id="replace-all-btn" class="btn">すべて置換</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification">
+        <p id="notification-message"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
