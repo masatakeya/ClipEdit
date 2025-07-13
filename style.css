@@ -21,7 +21,8 @@ body {
     line-height: 1.6;
     background-color: var(--primary-bg);
     color: var(--text-color);
-    overscroll-behavior-y: contain; /* スクロール連鎖を防止 */
+    overscroll-behavior-y: contain;
+    touch-action: manipulation;
 }
 
 .header {
@@ -107,7 +108,16 @@ body {
     color: white;
     font-size: 16px;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent; /* タップ時のハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.btn:hover:not(:disabled) {
+    background-color: #0056cc;
+}
+
+.btn:active:not(:disabled) {
+    background-color: #004bb5;
 }
 
 .btn:disabled {

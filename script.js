@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateStats = () => {
         const text = elements.editor.value;
         const charCount = text.length;
-        const lineCount = text.split('\n').filter(Boolean).length || (text.length > 0 ? 1 : 0);
+        const lineCount = text.split('\n').length;
         elements.statsBar.innerHTML = `<span>文字数: ${charCount}</span><span>行数: ${lineCount}</span>`;
     };
 
