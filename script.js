@@ -170,8 +170,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.notificationManager.show('ペーストしました');
             } catch (err) {
                 console.error('Failed to read clipboard: ', err);
-                this.notificationManager.show('ペーストに失敗しました。手動でペーストしてください。');
+                this.fallbackPaste();
             }
+        }
+        
+        fallbackPaste() {
+            this.editor.focus();
+            this.editor.select();
+            this.notificationManager.show('テキストエリアを長押しして「ペースト」を選択してください');
         }
         
         async copy() {
@@ -186,6 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         async pasteWithPermissionCheck() {
+            if (!navigator.clipboard) {
+                this.notificationManager.show('このブラウザではクリップボード機能がサポートされていません。');
+                return;
+            }
+
             if (navigator.permissions) {
                 try {
                     const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
@@ -193,19 +204,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         this.notificationManager.show('クリップボードへのアクセスが拒否されています。');
                         return;
                     }
-                    this.paste();
+                    await this.paste();
                 } catch (error) {
-                    this.paste();
+                    await this.paste();
                 }
             } else {
-                this.paste();
+                await this.paste();
             }
         }
     }
     
     const clipboardManager = new ClipboardManager(elements.editor, notificationManager, historyManager, updateStats);
 
-    elements.pasteBtn.addEventListener('click', () => clipboardManager.pasteWithPermissionCheck());
+    elements.pasteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        clipboardManager.pasteWithPermissionCheck();
+    });
     elements.copyBtn.addEventListener('click', () => clipboardManager.copy());
 
     // --- Toolbar Actions ---
