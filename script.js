@@ -134,6 +134,15 @@ document.addEventListener('DOMContentLoaded', () => {
         historyManager.record();
     });
 
+    // pasteイベントも監視して、手動ペーストの際に通知を表示
+    elements.editor.addEventListener('paste', () => {
+        setTimeout(() => {
+            updateStats();
+            historyManager.record(true);
+            notificationManager.show('ペーストしました');
+        }, 10);
+    });
+
     // --- Notification Manager ---
     class NotificationManager {
         constructor(notificationElement, messageElement) {
@@ -180,6 +189,15 @@ document.addEventListener('DOMContentLoaded', () => {
             this.notificationManager.show('テキストエリアを長押しして「ペースト」を選択してください');
         }
         
+        // プログラムでペーストイベントを発生させる
+        triggerPaste() {
+            this.editor.focus();
+            const pasteEvent = new ClipboardEvent('paste', {
+                clipboardData: new DataTransfer()
+            });
+            this.editor.dispatchEvent(pasteEvent);
+        }
+        
         async copy() {
             try {
                 await navigator.clipboard.writeText(this.editor.value);
@@ -192,8 +210,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         async pasteWithPermissionCheck() {
+            // iOS/モバイルブラウザでは、テキストエリアにフォーカスしてから
+            // ペーストイベントを発生させる方法を試す
+            this.editor.focus();
+            
+            try {
+                // モバイルブラウザでの代替方法：execCommandを使用
+                if (document.execCommand && document.execCommand('paste')) {
+                    this.updateStats();
+                    this.historyManager.record(true);
+                    this.notificationManager.show('ペーストしました');
+                    return;
+                }
+            } catch (error) {
+                console.log('execCommand paste failed:', error);
+            }
+
+            // 標準的なClipboard APIを試す
             if (!navigator.clipboard) {
-                this.notificationManager.show('このブラウザではクリップボード機能がサポートされていません。');
+                this.fallbackPaste();
                 return;
             }
 
@@ -201,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' });
                     if (permissionStatus.state === 'denied') {
-                        this.notificationManager.show('クリップボードへのアクセスが拒否されています。');
+                        this.fallbackPaste();
                         return;
                     }
                     await this.paste();
