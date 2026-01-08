@@ -25,3 +25,7 @@ export const DOM_IDS = {
     replaceBtn: 'replace-btn',
     replaceAllBtn: 'replace-all-btn'
 };
+
+export const STORAGE_KEYS = {
+    EDITOR_CONTENT: 'clipedit_editor_content'
+};

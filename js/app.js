@@ -1,9 +1,10 @@
-import { DOM_IDS } from './constants.js';
+import { DOM_IDS, STORAGE_KEYS } from './constants.js';
 import { getElement } from './utils.js';
 import { NotificationManager } from './notificationManager.js';
 import { HistoryManager } from './historyManager.js';
 import { ClipboardManager } from './clipboardManager.js';
 import { SearchManager } from './searchManager.js';
+import { StorageManager } from './storageManager.js';
 
 class ClipEditApp {
     constructor() {
@@ -23,23 +24,23 @@ class ClipEditApp {
 
     initializeManagers() {
         this.notificationManager = new NotificationManager(
-            this.elements.notification, 
+            this.elements.notification,
             this.elements.notificationMessage
         );
-        
+
         this.historyManager = new HistoryManager(
-            this.elements.editor, 
-            this.elements.undoBtn, 
+            this.elements.editor,
+            this.elements.undoBtn,
             this.elements.redoBtn
         );
-        
+
         this.clipboardManager = new ClipboardManager(
-            this.elements.editor, 
-            this.notificationManager, 
-            this.historyManager, 
+            this.elements.editor,
+            this.notificationManager,
+            this.historyManager,
             this.updateStats.bind(this)
         );
-        
+
         this.searchManager = new SearchManager(
             this.elements.editor,
             this.elements.searchPanel,
@@ -50,6 +51,8 @@ class ClipEditApp {
             this.historyManager,
             this.updateStats.bind(this)
         );
+
+        this.storageManager = new StorageManager();
     }
 
     updateStats() {
@@ -63,12 +66,14 @@ class ClipEditApp {
         this.elements.editor.addEventListener('input', () => {
             this.updateStats();
             this.historyManager.record();
+            this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
         });
 
         this.elements.editor.addEventListener('paste', () => {
             setTimeout(() => {
                 this.updateStats();
                 this.historyManager.record(true);
+                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
                 this.notificationManager.show('ペーストしました');
             }, 10);
         });
@@ -76,13 +81,15 @@ class ClipEditApp {
         this.elements.pasteBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // 直接ここでClipboard APIを呼び出す（ユーザーインタラクション内）
             try {
                 const text = await navigator.clipboard.readText();
                 this.elements.editor.value = text;
+                this.elements.editor.value = text;
                 this.updateStats();
                 this.historyManager.record(true);
+                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
                 this.notificationManager.show('ペーストしました');
             } catch (error) {
                 console.log('Direct clipboard access failed:', error);
@@ -99,6 +106,7 @@ class ClipEditApp {
             this.elements.editor.value = '';
             this.updateStats();
             this.historyManager.record(true);
+            this.storageManager.remove(STORAGE_KEYS.EDITOR_CONTENT);
             this.notificationManager.show('クリアしました');
         });
 
@@ -109,12 +117,14 @@ class ClipEditApp {
         this.elements.undoBtn.addEventListener('click', () => {
             if (this.historyManager.undo()) {
                 this.updateStats();
+                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
             }
         });
 
         this.elements.redoBtn.addEventListener('click', () => {
             if (this.historyManager.redo()) {
                 this.updateStats();
+                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
             }
         });
 
@@ -136,15 +146,24 @@ class ClipEditApp {
 
         this.elements.replaceBtn.addEventListener('click', () => {
             this.searchManager.replace();
+            this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
         });
 
         this.elements.replaceAllBtn.addEventListener('click', () => {
             this.searchManager.replaceAll();
+            this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
         });
     }
 
     init() {
         this.historyManager.init();
+
+        // Restore content from storage
+        const savedContent = this.storageManager.get(STORAGE_KEYS.EDITOR_CONTENT);
+        if (savedContent) {
+            this.elements.editor.value = savedContent;
+        }
+
         this.updateStats();
     }
 }
