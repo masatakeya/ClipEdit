@@ -194,6 +194,18 @@ body {
     gap: 12px;
 }
 
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.input-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
 .search-panel__body input[type="text"] {
     width: 100%;
     padding: 10px;
@@ -204,8 +216,31 @@ body {
 
 .search-options {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
     font-size: 14px;
+}
+
+.search-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-hint {
+    font-size: 12px;
+    color: #666;
+    padding: 8px;
+    background-color: #f8f8f8;
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.search-hint code {
+    background-color: #e8e8e8;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
 }
 
 .search-actions {
@@ -219,6 +254,16 @@ body {
     width: 100%;
 }
 
+.transform-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.transform-actions .btn {
+    width: 100%;
+}
+
 /* --- モバイル向けレスポンシブ対応 --- */
 @media (max-width: 768px) {
     .toolbar {
@@ -229,7 +274,7 @@ body {
         gap: 8px;
     }
 
-    /* 上段に2個のボタン */
+    /* 1行目に3個のボタン */
     .toolbar .btn:nth-child(1) {
         grid-column: 1;
         grid-row: 1;
@@ -240,18 +285,23 @@ body {
         grid-row: 1;
     }
 
-    /* 下段に3個のボタン */
     .toolbar .btn:nth-child(3) {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    /* 2行目に3個のボタン */
+    .toolbar .btn:nth-child(4) {
         grid-column: 1;
         grid-row: 2;
     }
 
-    .toolbar .btn:nth-child(4) {
+    .toolbar .btn:nth-child(5) {
         grid-column: 2;
         grid-row: 2;
     }
 
-    .toolbar .btn:nth-child(5) {
+    .toolbar .btn:nth-child(6) {
         grid-column: 3;
         grid-row: 2;
     }
