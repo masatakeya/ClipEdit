@@ -20,10 +20,16 @@ export const DOM_IDS = {
     searchInput: 'search-input',
     replaceInput: 'replace-input',
     caseSensitiveCheckbox: 'case-sensitive-checkbox',
+    regexCheckbox: 'regex-checkbox',
     findPrevBtn: 'find-prev-btn',
     findNextBtn: 'find-next-btn',
     replaceBtn: 'replace-btn',
-    replaceAllBtn: 'replace-all-btn'
+    replaceAllBtn: 'replace-all-btn',
+    transformBtn: 'transform-btn',
+    transformPanel: 'transform-panel',
+    closeTransformPanelBtn: 'close-transform-panel-btn',
+    toHalfWidthBtn: 'to-half-width-btn',
+    toFullWidthBtn: 'to-full-width-btn'
 };
 
 export const STORAGE_KEYS = {

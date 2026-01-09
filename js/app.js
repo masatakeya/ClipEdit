@@ -5,6 +5,7 @@ import { HistoryManager } from './historyManager.js';
 import { ClipboardManager } from './clipboardManager.js';
 import { SearchManager } from './searchManager.js';
 import { StorageManager } from './storageManager.js';
+import { TextTransformManager } from './textTransformManager.js';
 
 class ClipEditApp {
     constructor() {
@@ -17,7 +18,11 @@ class ClipEditApp {
     initializeElements() {
         const elements = {};
         for (const [key, id] of Object.entries(DOM_IDS)) {
-            elements[key] = getElement(id);
+            const element = getElement(id);
+            if (!element) {
+                console.error(`Element not found: ${id} (${key})`);
+            }
+            elements[key] = element;
         }
         return elements;
     }
@@ -41,18 +46,28 @@ class ClipEditApp {
             this.updateStats.bind(this)
         );
 
+        this.storageManager = new StorageManager();
+
         this.searchManager = new SearchManager(
             this.elements.editor,
             this.elements.searchPanel,
             this.elements.searchInput,
             this.elements.replaceInput,
             this.elements.caseSensitiveCheckbox,
+            this.elements.regexCheckbox,
             this.notificationManager,
             this.historyManager,
             this.updateStats.bind(this)
         );
 
-        this.storageManager = new StorageManager();
+        this.textTransformManager = new TextTransformManager(
+            this.elements.editor,
+            this.notificationManager,
+            this.historyManager,
+            this.updateStats.bind(this),
+            this.storageManager,
+            STORAGE_KEYS.EDITOR_CONTENT
+        );
     }
 
     updateStats() {
@@ -153,6 +168,34 @@ class ClipEditApp {
             this.searchManager.replaceAll();
             this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
         });
+
+        if (this.elements.transformBtn) {
+            this.elements.transformBtn.addEventListener('click', () => {
+                if (this.elements.transformPanel) {
+                    this.elements.transformPanel.style.display = 'flex';
+                }
+            });
+        }
+
+        if (this.elements.closeTransformPanelBtn) {
+            this.elements.closeTransformPanelBtn.addEventListener('click', () => {
+                this.elements.transformPanel.style.display = 'none';
+            });
+        }
+
+        if (this.elements.toHalfWidthBtn) {
+            this.elements.toHalfWidthBtn.addEventListener('click', () => {
+                this.textTransformManager.toHalfWidth();
+                this.elements.transformPanel.style.display = 'none';
+            });
+        }
+
+        if (this.elements.toFullWidthBtn) {
+            this.elements.toFullWidthBtn.addEventListener('click', () => {
+                this.textTransformManager.toFullWidth();
+                this.elements.transformPanel.style.display = 'none';
+            });
+        }
     }
 
     init() {
