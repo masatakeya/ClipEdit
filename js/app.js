@@ -101,7 +101,6 @@ class ClipEditApp {
             try {
                 const text = await navigator.clipboard.readText();
                 this.elements.editor.value = text;
-                this.elements.editor.value = text;
                 this.updateStats();
                 this.historyManager.record(true);
                 this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
