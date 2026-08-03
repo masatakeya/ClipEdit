@@ -1,5 +1,6 @@
 export const CONSTANTS = {
     MAX_HISTORY: 10,
+    MAX_CLIPBOARD_HISTORY: 20,
     NOTIFICATION_DURATION: 3000
 };
 
@@ -29,9 +30,15 @@ export const DOM_IDS = {
     transformPanel: 'transform-panel',
     closeTransformPanelBtn: 'close-transform-panel-btn',
     toHalfWidthBtn: 'to-half-width-btn',
-    toFullWidthBtn: 'to-full-width-btn'
+    toFullWidthBtn: 'to-full-width-btn',
+    historyBtn: 'history-btn',
+    historyPanel: 'history-panel',
+    closeHistoryPanelBtn: 'close-history-panel-btn',
+    historyList: 'history-list',
+    clearHistoryBtn: 'clear-history-btn'
 };
 
 export const STORAGE_KEYS = {
-    EDITOR_CONTENT: 'clipedit_editor_content'
+    EDITOR_CONTENT: 'clipedit_editor_content',
+    CLIPBOARD_HISTORY: 'clipedit_clipboard_history'
 };

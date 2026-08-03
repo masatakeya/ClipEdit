@@ -264,6 +264,92 @@ body {
     width: 100%;
 }
 
+/* --- クリップボード履歴パネル --- */
+.btn--danger {
+    background-color: #e74c3c;
+    width: 100%;
+    margin-top: 12px;
+}
+
+.btn--danger:hover:not(:disabled) {
+    background-color: #c0392b;
+}
+
+.btn--danger:active:not(:disabled) {
+    background-color: #a93226;
+}
+
+.history-list {
+    list-style: none;
+    max-height: 50vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.history-empty {
+    padding: 16px 8px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+.history-item {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.history-item__content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.history-item__content:hover {
+    background-color: var(--primary-bg);
+}
+
+.history-item__preview {
+    font-size: 14px;
+    color: var(--text-color);
+    word-break: break-all;
+}
+
+.history-item__time {
+    font-size: 12px;
+    color: #999;
+}
+
+.history-item__delete {
+    flex-shrink: 0;
+    width: 40px;
+    background: none;
+    border: none;
+    border-left: 1px solid var(--border-color);
+    font-size: 20px;
+    color: #999;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.history-item__delete:hover {
+    background-color: #fdecea;
+    color: #e74c3c;
+}
+
 /* --- モバイル向けレスポンシブ対応 --- */
 @media (max-width: 768px) {
     .toolbar {
@@ -306,13 +392,19 @@ body {
         grid-row: 2;
     }
 
+    /* 3行目に1個のボタン */
+    .toolbar .btn:nth-child(7) {
+        grid-column: 1;
+        grid-row: 3;
+    }
+
     /* ツールバーの高さが変わったので、メインコンテナの下部パディングも調整 */
     .main-container {
-        padding-bottom: calc(var(--toolbar-height) * 2);
+        padding-bottom: calc(var(--toolbar-height) * 3);
     }
 
     /* 通知の位置も調整 */
     .notification {
-        bottom: calc(var(--toolbar-height) * 2 + 20px);
+        bottom: calc(var(--toolbar-height) * 3 + 20px);
     }
 }

@@ -32,6 +32,7 @@
         <button id="redo-btn" class="btn" disabled>やり直し</button>
         <button id="search-btn" class="btn">検索</button>
         <button id="transform-btn" class="btn">変換</button>
+        <button id="history-btn" class="btn">履歴</button>
     </div>
 
     <div id="search-replace-panel" class="search-panel-overlay" style="display: none;">
@@ -77,6 +78,19 @@
                     <button id="to-half-width-btn" class="btn">全角→半角</button>
                     <button id="to-full-width-btn" class="btn">半角→全角</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="history-panel" class="search-panel-overlay" style="display: none;">
+        <div class="search-panel">
+            <div class="search-panel__header">
+                <h3>クリップボード履歴</h3>
+                <button id="close-history-panel-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="search-panel__body">
+                <ul id="history-list" class="history-list"></ul>
+                <button id="clear-history-btn" class="btn btn--danger">履歴を全て削除</button>
             </div>
         </div>
     </div>

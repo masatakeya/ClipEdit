@@ -1,8 +1,9 @@
-import { DOM_IDS, STORAGE_KEYS } from './constants.js';
+import { CONSTANTS, DOM_IDS, STORAGE_KEYS } from './constants.js';
 import { getElement } from './utils.js';
 import { NotificationManager } from './notificationManager.js';
 import { HistoryManager } from './historyManager.js';
 import { ClipboardManager } from './clipboardManager.js';
+import { ClipboardHistoryManager } from './clipboardHistoryManager.js';
 import { SearchManager } from './searchManager.js';
 import { StorageManager } from './storageManager.js';
 import { TextTransformManager } from './textTransformManager.js';
@@ -39,14 +40,21 @@ class ClipEditApp {
             this.elements.redoBtn
         );
 
+        this.storageManager = new StorageManager();
+
+        this.clipboardHistoryManager = new ClipboardHistoryManager(
+            this.storageManager,
+            STORAGE_KEYS.CLIPBOARD_HISTORY,
+            CONSTANTS.MAX_CLIPBOARD_HISTORY
+        );
+
         this.clipboardManager = new ClipboardManager(
             this.elements.editor,
             this.notificationManager,
             this.historyManager,
-            this.updateStats.bind(this)
+            this.updateStats.bind(this),
+            this.clipboardHistoryManager
         );
-
-        this.storageManager = new StorageManager();
 
         this.searchManager = new SearchManager(
             this.elements.editor,
@@ -89,6 +97,7 @@ class ClipEditApp {
                 this.updateStats();
                 this.historyManager.record(true);
                 this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
+                this.clipboardHistoryManager.add(this.elements.editor.value);
                 this.notificationManager.show('ペーストしました');
             }, 10);
         });
@@ -104,6 +113,7 @@ class ClipEditApp {
                 this.updateStats();
                 this.historyManager.record(true);
                 this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
+                this.clipboardHistoryManager.add(text);
                 this.notificationManager.show('ペーストしました');
             } catch (error) {
                 console.log('Direct clipboard access failed:', error);
@@ -195,6 +205,81 @@ class ClipEditApp {
                 this.elements.transformPanel.style.display = 'none';
             });
         }
+
+        this.elements.historyBtn.addEventListener('click', () => {
+            this.renderHistoryList();
+            this.elements.historyPanel.style.display = 'flex';
+        });
+
+        this.elements.closeHistoryPanelBtn.addEventListener('click', () => {
+            this.elements.historyPanel.style.display = 'none';
+        });
+
+        this.elements.clearHistoryBtn.addEventListener('click', () => {
+            this.clipboardHistoryManager.clear();
+            this.renderHistoryList();
+            this.notificationManager.show('履歴を削除しました');
+        });
+    }
+
+    renderHistoryList() {
+        const items = this.clipboardHistoryManager.getAll();
+        this.elements.historyList.innerHTML = '';
+
+        if (items.length === 0) {
+            const emptyItem = document.createElement('li');
+            emptyItem.className = 'history-empty';
+            emptyItem.textContent = '履歴がありません';
+            this.elements.historyList.appendChild(emptyItem);
+            return;
+        }
+
+        items.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+
+            const contentBtn = document.createElement('button');
+            contentBtn.type = 'button';
+            contentBtn.className = 'history-item__content';
+
+            const preview = document.createElement('span');
+            preview.className = 'history-item__preview';
+            preview.textContent = item.text.replace(/\s+/g, ' ').trim().slice(0, 60) || '(空白のみ)';
+
+            const time = document.createElement('span');
+            time.className = 'history-item__time';
+            time.textContent = new Date(item.timestamp).toLocaleString('ja-JP', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            contentBtn.appendChild(preview);
+            contentBtn.appendChild(time);
+            contentBtn.addEventListener('click', () => {
+                this.elements.editor.value = item.text;
+                this.updateStats();
+                this.historyManager.record(true);
+                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
+                this.elements.historyPanel.style.display = 'none';
+                this.notificationManager.show('履歴から復元しました');
+            });
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'history-item__delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.setAttribute('aria-label', '削除');
+            deleteBtn.addEventListener('click', () => {
+                this.clipboardHistoryManager.remove(index);
+                this.renderHistoryList();
+            });
+
+            li.appendChild(contentBtn);
+            li.appendChild(deleteBtn);
+            this.elements.historyList.appendChild(li);
+        });
     }
 
     init() {
