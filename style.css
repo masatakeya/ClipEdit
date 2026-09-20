@@ -165,6 +165,8 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     width: 90%;
     max-width: 400px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .search-panel__header {
@@ -281,11 +283,12 @@ body {
 
 .history-list {
     list-style: none;
+    flex-shrink: 0;
     max-height: 50vh;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    /* flexコンテナにすると項目がflex-shrinkで潰れて読めなくなるためblockで縦積みする */
+    display: block;
+    -webkit-overflow-scrolling: touch;
 }
 
 .history-empty {
@@ -298,14 +301,19 @@ body {
 .history-item {
     display: flex;
     align-items: stretch;
-    gap: 4px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     overflow: hidden;
+    background-color: var(--secondary-bg);
+}
+
+.history-item + .history-item {
+    margin-top: 8px;
 }
 
 .history-item__content {
-    flex-grow: 1;
+    flex: 1 1 auto;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -315,6 +323,9 @@ body {
     border: none;
     text-align: left;
     cursor: pointer;
+    /* buttonはfont関連を継承しないため明示的に揃える */
+    font: inherit;
+    color: var(--text-color);
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -323,23 +334,34 @@ body {
 }
 
 .history-item__preview {
-    font-size: 14px;
+    width: 100%;
+    font-size: 15px;
+    line-height: 1.5;
     color: var(--text-color);
-    word-break: break-all;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+    /* 長文は2行までで省略表示 */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
 }
 
 .history-item__time {
     font-size: 12px;
-    color: #999;
+    color: #777;
 }
 
 .history-item__delete {
-    flex-shrink: 0;
-    width: 40px;
+    flex: 0 0 44px;
+    width: 44px;
     background: none;
     border: none;
     border-left: 1px solid var(--border-color);
     font-size: 20px;
+    line-height: 1;
     color: #999;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
