@@ -222,6 +222,21 @@ class ClipEditApp {
         });
     }
 
+    createPreviewText(text) {
+        // 改行は残しつつ（CSS側で2行までに省略表示）、余分な空白だけを詰める
+        const normalized = text
+            .replace(/\r\n?/g, '\n')
+            .replace(/[ \t\u3000]+/g, ' ')
+            .replace(/\n\s*\n+/g, '\n')
+            .trim();
+
+        if (!normalized) return '(空白のみ)';
+
+        return normalized.length > CONSTANTS.HISTORY_PREVIEW_LENGTH
+            ? `${normalized.slice(0, CONSTANTS.HISTORY_PREVIEW_LENGTH)}…`
+            : normalized;
+    }
+
     renderHistoryList() {
         const items = this.clipboardHistoryManager.getAll();
         this.elements.historyList.innerHTML = '';
@@ -244,7 +259,7 @@ class ClipEditApp {
 
             const preview = document.createElement('span');
             preview.className = 'history-item__preview';
-            preview.textContent = item.text.replace(/\s+/g, ' ').trim().slice(0, 60) || '(空白のみ)';
+            preview.textContent = this.createPreviewText(item.text);
 
             const time = document.createElement('span');
             time.className = 'history-item__time';
@@ -255,6 +270,7 @@ class ClipEditApp {
                 minute: '2-digit'
             });
 
+            contentBtn.title = item.text.slice(0, CONSTANTS.HISTORY_TOOLTIP_LENGTH);
             contentBtn.appendChild(preview);
             contentBtn.appendChild(time);
             contentBtn.addEventListener('click', () => {
