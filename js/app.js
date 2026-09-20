@@ -45,7 +45,12 @@ class ClipEditApp {
         this.clipboardHistoryManager = new ClipboardHistoryManager(
             this.storageManager,
             STORAGE_KEYS.CLIPBOARD_HISTORY,
-            CONSTANTS.MAX_CLIPBOARD_HISTORY
+            CONSTANTS.MAX_CLIPBOARD_HISTORY,
+            {
+                mergeWindowMs: CONSTANTS.HISTORY_MERGE_WINDOW_MS,
+                mergeSimilarity: CONSTANTS.HISTORY_MERGE_SIMILARITY,
+                mergeMinLength: CONSTANTS.HISTORY_MERGE_MIN_LENGTH
+            }
         );
 
         this.clipboardManager = new ClipboardManager(
@@ -92,12 +97,14 @@ class ClipEditApp {
             this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
         });
 
-        this.elements.editor.addEventListener('paste', () => {
+        this.elements.editor.addEventListener('paste', (event) => {
+            // エディタ全文ではなく、実際に貼り付けられたテキストを履歴に残す
+            const pastedText = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
             setTimeout(() => {
                 this.updateStats();
                 this.historyManager.record(true);
                 this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
-                this.clipboardHistoryManager.add(this.elements.editor.value);
+                this.clipboardHistoryManager.add(pastedText || this.elements.editor.value);
                 this.notificationManager.show('ペーストしました');
             }, 10);
         });
