@@ -109,10 +109,13 @@ class ClipEditApp {
             // エディタ全文ではなく、実際に貼り付けられたテキストを履歴に残す
             const pastedText = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
 
-            // テキスト系ファイルを含む場合は、テキストとファイルの中身を結合して挿入する
+            // クリップボードの読み取りを待つ間に選択範囲が変わらないよう先に控えておく
+            const { selectionStart, selectionEnd } = this.elements.editor;
+
+            // 標準の貼り付けでは取りこぼす内容があれば、結合して挿入する
             const combinedText = await this.clipboardManager.readPasteEvent(event);
             if (combinedText !== null) {
-                this.clipboardManager.insertAtCursor(combinedText);
+                this.clipboardManager.insertAtCursor(combinedText, selectionStart, selectionEnd);
                 this.afterPaste(combinedText);
                 return;
             }

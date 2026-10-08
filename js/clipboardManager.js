@@ -18,6 +18,18 @@ export function joinTextParts(parts) {
     return unique.join('\n\n');
 }
 
+/**
+ * iOS / iPadOS の WebKit は、paste イベントの clipboardData に先頭アイテムの
+ * テキストしか渡さない。そのため直接ペーストでも clipboard.read() で全アイテムを読む。
+ * それ以外の環境では read() が権限確認を出すことがあるため、標準の貼り付けに任せる。
+ */
+function shouldReadAllItemsOnPaste() {
+    if (!navigator.clipboard || !navigator.clipboard.read) return false;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return isIOS || isIPadOS;
+}
+
 export class ClipboardManager {
     constructor(editor, notificationManager, historyManager, updateStats, clipboardHistoryManager) {
         this.editor = editor;
@@ -34,47 +46,59 @@ export class ClipboardManager {
      * 先頭のアイテムしか取れない。read() で全アイテムを読んで結合する。
      */
     async readText() {
-        if (navigator.clipboard.read) {
-            try {
-                const items = await navigator.clipboard.read();
-                const parts = [];
-                for (const item of items) {
-                    if (item.types.includes('text/plain')) {
-                        const blob = await item.getType('text/plain');
-                        parts.push(await blob.text());
-                    }
-                }
-                const text = joinTextParts(parts);
-                if (text) return text;
-            } catch (err) {
-                console.log('clipboard.read() failed, falling back to readText():', err);
-            }
-        }
+        const text = joinTextParts(await this.readAllTextItems());
+        if (text) return text;
         return navigator.clipboard.readText();
     }
 
     /**
-     * エディタへの直接ペーストで、テキスト系ファイルが含まれていれば
-     * 標準の貼り付けを止めて、テキストとファイルの内容を結合して挿入する。
-     * 含まれていなければ null を返し、ブラウザ標準の貼り付けに任せる。
+     * clipboard.read() で全アイテムの text/plain を読む。
+     * 使えない・失敗した場合は空配列を返す。
+     */
+    async readAllTextItems() {
+        if (!navigator.clipboard || !navigator.clipboard.read) return [];
+        try {
+            const items = await navigator.clipboard.read();
+            const parts = [];
+            for (const item of items) {
+                if (item.types.includes('text/plain')) {
+                    const blob = await item.getType('text/plain');
+                    parts.push(await blob.text());
+                }
+            }
+            return parts;
+        } catch (err) {
+            console.log('clipboard.read() failed:', err);
+            return [];
+        }
+    }
+
+    /**
+     * エディタへの直接ペーストで、標準の貼り付けでは取りこぼす内容があれば
+     * 標準の貼り付けを止めて、すべてのテキストを結合して返す。
+     * - テキスト系ファイルが含まれる場合: テキストとファイルの中身を結合
+     * - iOS / iPadOS の場合: clipboard.read() で読んだ全アイテムも結合
+     * どちらにも当たらなければ null を返し、ブラウザ標準の貼り付けに任せる。
      */
     async readPasteEvent(event) {
         const data = event.clipboardData;
         if (!data) return null;
 
         const textFiles = Array.from(data.files || []).filter(isTextFile);
-        if (textFiles.length === 0) return null;
+        const readAllItems = shouldReadAllItemsOnPaste();
+        if (textFiles.length === 0 && !readAllItems) return null;
 
         // await より前に止めないと標準の貼り付けが走ってしまう
         event.preventDefault();
         const plain = data.getData('text/plain');
         const fileTexts = await Promise.all(textFiles.map(file => file.text()));
-        return joinTextParts([plain, ...fileTexts]);
+        const itemTexts = readAllItems ? await this.readAllTextItems() : [];
+        // read() に失敗しても plain は残るので、少なくとも標準と同じ内容は入る
+        return joinTextParts([plain, ...fileTexts, ...itemTexts]);
     }
 
-    insertAtCursor(text) {
-        const { selectionStart, selectionEnd } = this.editor;
-        this.editor.setRangeText(text, selectionStart, selectionEnd, 'end');
+    insertAtCursor(text, start = this.editor.selectionStart, end = this.editor.selectionEnd) {
+        this.editor.setRangeText(text, start, end, 'end');
     }
 
     async paste() {
