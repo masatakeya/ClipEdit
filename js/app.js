@@ -83,6 +83,14 @@ class ClipEditApp {
         );
     }
 
+    afterPaste(historyText) {
+        this.updateStats();
+        this.historyManager.record(true);
+        this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
+        this.clipboardHistoryManager.add(historyText);
+        this.notificationManager.show('ペーストしました');
+    }
+
     updateStats() {
         const text = this.elements.editor.value;
         const charCount = text.length;
@@ -97,16 +105,19 @@ class ClipEditApp {
             this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
         });
 
-        this.elements.editor.addEventListener('paste', (event) => {
+        this.elements.editor.addEventListener('paste', async (event) => {
             // エディタ全文ではなく、実際に貼り付けられたテキストを履歴に残す
             const pastedText = event.clipboardData ? event.clipboardData.getData('text/plain') : '';
-            setTimeout(() => {
-                this.updateStats();
-                this.historyManager.record(true);
-                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
-                this.clipboardHistoryManager.add(pastedText || this.elements.editor.value);
-                this.notificationManager.show('ペーストしました');
-            }, 10);
+
+            // テキスト系ファイルを含む場合は、テキストとファイルの中身を結合して挿入する
+            const combinedText = await this.clipboardManager.readPasteEvent(event);
+            if (combinedText !== null) {
+                this.clipboardManager.insertAtCursor(combinedText);
+                this.afterPaste(combinedText);
+                return;
+            }
+
+            setTimeout(() => this.afterPaste(pastedText || this.elements.editor.value), 10);
         });
 
         this.elements.pasteBtn.addEventListener('click', async (e) => {
@@ -115,13 +126,9 @@ class ClipEditApp {
 
             // 直接ここでClipboard APIを呼び出す（ユーザーインタラクション内）
             try {
-                const text = await navigator.clipboard.readText();
+                const text = await this.clipboardManager.readText();
                 this.elements.editor.value = text;
-                this.updateStats();
-                this.historyManager.record(true);
-                this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, this.elements.editor.value);
-                this.clipboardHistoryManager.add(text);
-                this.notificationManager.show('ペーストしました');
+                this.afterPaste(text);
             } catch (error) {
                 console.log('Direct clipboard access failed:', error);
                 // フォールバック
