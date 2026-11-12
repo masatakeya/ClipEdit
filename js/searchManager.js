@@ -1,7 +1,7 @@
 import { escapeRegExp, unescapeString } from './utils.js';
 
 export class SearchManager {
-    constructor(editor, searchPanel, searchInput, replaceInput, caseSensitiveCheckbox, regexCheckbox, notificationManager, historyManager, updateStats) {
+    constructor(editor, searchPanel, searchInput, replaceInput, caseSensitiveCheckbox, regexCheckbox, notificationManager, historyManager, updateStats, selectionScopeCheckbox, selectionScopeInfo) {
         this.editor = editor;
         this.searchPanel = searchPanel;
         this.searchInput = searchInput;
@@ -11,197 +11,199 @@ export class SearchManager {
         this.notificationManager = notificationManager;
         this.historyManager = historyManager;
         this.updateStats = updateStats;
+        this.selectionScopeCheckbox = selectionScopeCheckbox;
+        this.selectionScopeInfo = selectionScopeInfo;
+
+        // パネルを開いた時点の選択範囲（置換範囲として使う）
+        this.scope = null;
     }
-    
+
     show() {
+        // パネルを開いた時点で範囲選択されていれば、その範囲を置換対象として記録する
+        const start = this.editor.selectionStart;
+        const end = this.editor.selectionEnd;
+        this.scope = start !== end ? { start, end } : null;
+        this.updateScopeUI();
         this.searchPanel.style.display = 'flex';
     }
-    
+
     hide() {
         this.searchPanel.style.display = 'none';
     }
-    
+
+    updateScopeUI() {
+        if (!this.selectionScopeCheckbox) return;
+        const hasScope = this.scope !== null;
+        this.selectionScopeCheckbox.disabled = !hasScope;
+        this.selectionScopeCheckbox.checked = hasScope;
+        if (this.selectionScopeInfo) {
+            this.selectionScopeInfo.textContent = hasScope
+                ? `（${this.scope.end - this.scope.start}文字）`
+                : '（範囲選択してから開くと使えます）';
+        }
+    }
+
+    // 現在有効な検索・置換範囲を返す
+    getRange() {
+        const useScope = this.scope && this.selectionScopeCheckbox && this.selectionScopeCheckbox.checked;
+        if (useScope) {
+            return { start: this.scope.start, end: this.scope.end, scoped: true };
+        }
+        return { start: 0, end: this.editor.value.length, scoped: false };
+    }
+
+    // 範囲内のテキスト変化に合わせて記録した範囲を伸縮させる
+    adjustScope(delta) {
+        if (this.scope && this.selectionScopeCheckbox && this.selectionScopeCheckbox.checked) {
+            this.scope.end += delta;
+            if (this.selectionScopeInfo) {
+                this.selectionScopeInfo.textContent = `（${this.scope.end - this.scope.start}文字）`;
+            }
+        }
+    }
+
+    buildRegex(searchTerm, flags) {
+        const pattern = this.regexCheckbox.checked ? searchTerm : escapeRegExp(searchTerm);
+        return new RegExp(pattern, flags);
+    }
+
+    // 範囲内のすべてのマッチ位置（エディタ全体での位置）を返す
+    collectMatches(searchTerm, range) {
+        const flags = this.caseSensitiveCheckbox.checked ? 'g' : 'gi';
+        const regex = this.buildRegex(searchTerm, flags);
+        const target = this.editor.value.substring(range.start, range.end);
+        const matches = [];
+        let match;
+        while ((match = regex.exec(target)) !== null) {
+            if (match[0].length === 0) {
+                // 空マッチで無限ループしないように進める
+                regex.lastIndex++;
+                continue;
+            }
+            matches.push({ index: range.start + match.index, length: match[0].length });
+        }
+        return matches;
+    }
+
     find(backward = false, silent = false) {
         const searchTerm = this.searchInput.value;
         if (!searchTerm) return false;
 
-        const text = this.editor.value;
-        const isCaseSensitive = this.caseSensitiveCheckbox.checked;
-        const useRegex = this.regexCheckbox.checked;
+        const range = this.getRange();
+        let matches;
+        try {
+            matches = this.collectMatches(searchTerm, range);
+        } catch (error) {
+            this.notificationManager.show('正規表現が無効です');
+            return false;
+        }
+
+        if (matches.length === 0) {
+            if (!silent) {
+                this.notificationManager.show(range.scoped ? '選択範囲内に見つかりませんでした' : '見つかりませんでした');
+            }
+            return false;
+        }
 
         const currentPos = backward ? this.editor.selectionStart : this.editor.selectionEnd;
 
-        if (useRegex) {
-            // 正規表現モード
-            try {
-                const flags = isCaseSensitive ? 'g' : 'gi';
-                const regex = new RegExp(searchTerm, flags);
-                const matches = [];
-                let match;
-
-                while ((match = regex.exec(text)) !== null) {
-                    matches.push({ index: match.index, length: match[0].length });
-                }
-
-                if (matches.length === 0) {
-                    if (!silent) {
-                        this.notificationManager.show('見つかりませんでした');
-                    }
-                    return false;
-                }
-
-                // 現在位置に基づいて次/前のマッチを見つける
-                let targetMatch;
-                if (backward) {
-                    // 現在位置より前のマッチを探す
-                    const beforeMatches = matches.filter(m => m.index < currentPos);
-                    targetMatch = beforeMatches.length > 0 ? beforeMatches[beforeMatches.length - 1] : matches[matches.length - 1];
-                } else {
-                    // 現在位置より後のマッチを探す
-                    const afterMatches = matches.filter(m => m.index >= currentPos);
-                    targetMatch = afterMatches.length > 0 ? afterMatches[0] : matches[0];
-                }
-
-                this.editor.focus();
-                this.editor.setSelectionRange(targetMatch.index, targetMatch.index + targetMatch.length);
-                return true;
-            } catch (error) {
-                this.notificationManager.show('正規表現が無効です');
-                return false;
-            }
+        let targetMatch;
+        if (backward) {
+            const beforeMatches = matches.filter(m => m.index < currentPos);
+            targetMatch = beforeMatches.length > 0 ? beforeMatches[beforeMatches.length - 1] : matches[matches.length - 1];
         } else {
-            // 通常の検索モード
-            let searchText = text;
-            let term = searchTerm;
-
-            if (!isCaseSensitive) {
-                searchText = text.toLowerCase();
-                term = searchTerm.toLowerCase();
-            }
-
-            let findPos;
-            if (backward) {
-                findPos = searchText.lastIndexOf(term, currentPos - 1);
-            } else {
-                findPos = searchText.indexOf(term, currentPos);
-            }
-
-            if (findPos !== -1) {
-                this.editor.focus();
-                this.editor.setSelectionRange(findPos, findPos + searchTerm.length);
-                return true;
-            } else {
-                if (!silent) {
-                    this.notificationManager.show('見つかりませんでした');
-                }
-                return false;
-            }
+            const afterMatches = matches.filter(m => m.index >= currentPos);
+            targetMatch = afterMatches.length > 0 ? afterMatches[0] : matches[0];
         }
+
+        this.editor.focus();
+        this.editor.setSelectionRange(targetMatch.index, targetMatch.index + targetMatch.length);
+        return true;
     }
-    
+
     replace() {
         const searchTerm = this.searchInput.value;
-        let replaceTerm = this.replaceInput.value;
         if (!searchTerm) return;
 
         // エスケープシーケンスを変換（\n → 改行など）
-        replaceTerm = unescapeString(replaceTerm);
+        const replaceTerm = unescapeString(this.replaceInput.value);
 
-        const useRegex = this.regexCheckbox.checked;
         const start = this.editor.selectionStart;
         const end = this.editor.selectionEnd;
-        const selectedText = this.editor.value.substring(start, end);
+        const range = this.getRange();
 
-        // 選択範囲がない場合は、まず検索を実行
-        if (start === end) {
-            this.find();
-            return;
-        }
-
-        let shouldReplace = false;
-
-        if (useRegex) {
-            // 正規表現モード
+        // 現在の選択が検索結果（範囲内のマッチ）でなければ、まず検索する
+        let isMatch = false;
+        if (start !== end && start >= range.start && end <= range.end) {
+            const flags = this.caseSensitiveCheckbox.checked ? '' : 'i';
             try {
-                const flags = this.caseSensitiveCheckbox.checked ? '' : 'i';
-                const regex = new RegExp('^(?:' + searchTerm + ')$', flags);
-
-                // 選択範囲全体が検索パターンと完全一致するか確認
-                if (regex.test(selectedText)) {
-                    shouldReplace = true;
-                }
+                const pattern = this.regexCheckbox.checked ? searchTerm : escapeRegExp(searchTerm);
+                isMatch = new RegExp('^(?:' + pattern + ')$', flags).test(this.editor.value.substring(start, end));
             } catch (error) {
                 this.notificationManager.show('正規表現が無効です');
                 return;
             }
-        } else {
-            // 通常モード
-            const compareTerm = this.caseSensitiveCheckbox.checked ? searchTerm : searchTerm.toLowerCase();
-            const compareSelected = this.caseSensitiveCheckbox.checked ? selectedText : selectedText.toLowerCase();
-
-            if (compareSelected === compareTerm) {
-                shouldReplace = true;
-            }
         }
 
-        if (shouldReplace) {
+        if (!isMatch) {
+            this.find();
+            return;
+        }
+
+        const selectedText = this.editor.value.substring(start, end);
+        let newText;
+        if (this.regexCheckbox.checked) {
             // 正規表現の場合、置換文字列でキャプチャグループを使えるようにする
-            if (useRegex) {
-                try {
-                    const flags = this.caseSensitiveCheckbox.checked ? '' : 'i';
-                    const regex = new RegExp(searchTerm, flags);
-                    const newText = selectedText.replace(regex, replaceTerm);
-                    this.editor.setRangeText(newText, start, end, 'end');
-                } catch (error) {
-                    this.notificationManager.show('正規表現が無効です');
-                    return;
-                }
-            } else {
-                this.editor.setRangeText(replaceTerm, start, end, 'end');
-            }
-            this.updateStats();
-            this.historyManager.record(true);
+            const flags = this.caseSensitiveCheckbox.checked ? '' : 'i';
+            newText = selectedText.replace(new RegExp(searchTerm, flags), replaceTerm);
+        } else {
+            newText = replaceTerm;
         }
+
+        this.editor.setRangeText(newText, start, end, 'end');
+        this.adjustScope(newText.length - selectedText.length);
+        this.updateStats();
+        this.historyManager.record(true);
 
         // 次の検索対象を探す（見つからなくても通知は表示しない）
         this.find(false, true);
     }
-    
+
     replaceAll() {
         const searchTerm = this.searchInput.value;
-        let replaceTerm = this.replaceInput.value;
         if (!searchTerm) return;
 
         // エスケープシーケンスを変換（\n → 改行など）
-        replaceTerm = unescapeString(replaceTerm);
+        const replaceTerm = unescapeString(this.replaceInput.value);
 
-        const useRegex = this.regexCheckbox.checked;
+        const range = this.getRange();
         const originalText = this.editor.value;
-        let newText;
-        let regex;
+        const target = originalText.substring(range.start, range.end);
 
         try {
             const flags = this.caseSensitiveCheckbox.checked ? 'g' : 'gi';
+            const regex = this.buildRegex(searchTerm, flags);
+            const replaced = target.replace(regex, replaceTerm);
 
-            if (useRegex) {
-                // 正規表現モード: ユーザーが入力したパターンをそのまま使用
-                regex = new RegExp(searchTerm, flags);
-            } else {
-                // 通常モード: 特殊文字をエスケープ
-                regex = new RegExp(escapeRegExp(searchTerm), flags);
+            if (replaced === target) {
+                this.notificationManager.show(range.scoped ? '選択範囲内に見つかりませんでした' : '見つかりませんでした');
+                return;
             }
 
-            newText = originalText.replace(regex, replaceTerm);
+            const replacements = (target.match(regex) || []).length;
+            this.editor.value = originalText.substring(0, range.start) + replaced + originalText.substring(range.end);
+            this.adjustScope(replaced.length - target.length);
 
-            if (originalText !== newText) {
-                const replacements = (originalText.match(regex) || []).length;
-                this.editor.value = newText;
-                this.updateStats();
-                this.historyManager.record(true);
-                this.notificationManager.show(`${replacements}件を置換しました`);
-            } else {
-                this.notificationManager.show('見つかりませんでした');
+            if (range.scoped) {
+                // 置換後の範囲を選択状態にして、どこが変わったか分かるようにする
+                this.editor.setSelectionRange(this.scope.start, this.scope.end);
             }
+
+            this.updateStats();
+            this.historyManager.record(true);
+            this.notificationManager.show(range.scoped
+                ? `選択範囲内で${replacements}件を置換しました`
+                : `${replacements}件を置換しました`);
         } catch (error) {
             this.notificationManager.show('正規表現が無効です');
         }

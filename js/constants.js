@@ -27,6 +27,8 @@ export const DOM_IDS = {
     replaceInput: 'replace-input',
     caseSensitiveCheckbox: 'case-sensitive-checkbox',
     regexCheckbox: 'regex-checkbox',
+    selectionScopeCheckbox: 'selection-scope-checkbox',
+    selectionScopeInfo: 'selection-scope-info',
     findPrevBtn: 'find-prev-btn',
     findNextBtn: 'find-next-btn',
     replaceBtn: 'replace-btn',
