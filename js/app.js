@@ -70,7 +70,9 @@ class ClipEditApp {
             this.elements.regexCheckbox,
             this.notificationManager,
             this.historyManager,
-            this.updateStats.bind(this)
+            this.updateStats.bind(this),
+            this.elements.selectionScopeCheckbox,
+            this.elements.selectionScopeInfo
         );
 
         this.textTransformManager = new TextTransformManager(
