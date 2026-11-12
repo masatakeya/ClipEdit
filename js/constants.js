@@ -43,11 +43,18 @@ export const DOM_IDS = {
     historyPanel: 'history-panel',
     closeHistoryPanelBtn: 'close-history-panel-btn',
     historyList: 'history-list',
-    clearHistoryBtn: 'clear-history-btn'
+    clearHistoryBtn: 'clear-history-btn',
+    templateBtn: 'template-btn',
+    templatePanel: 'template-panel',
+    closeTemplatePanelBtn: 'close-template-panel-btn',
+    templateList: 'template-list',
+    templateInput: 'template-input',
+    addTemplateBtn: 'add-template-btn'
 };
 
 export const STORAGE_KEYS = {
     EDITOR_CONTENT: 'clipedit_editor_content',
     CLIPBOARD_HISTORY: 'clipedit_clipboard_history',
-    SELECT_MODE: 'clipedit_select_mode'
+    SELECT_MODE: 'clipedit_select_mode',
+    TEMPLATES: 'clipedit_templates'
 };
