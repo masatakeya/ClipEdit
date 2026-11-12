@@ -34,6 +34,7 @@
         <button id="search-btn" class="btn">検索</button>
         <button id="transform-btn" class="btn">変換</button>
         <button id="history-btn" class="btn">履歴</button>
+        <button id="template-btn" class="btn">定型文</button>
     </div>
 
     <div id="search-replace-panel" class="search-panel-overlay" style="display: none;">
@@ -93,6 +94,23 @@
             <div class="search-panel__body">
                 <ul id="history-list" class="history-list"></ul>
                 <button id="clear-history-btn" class="btn btn--danger">履歴を全て削除</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="template-panel" class="search-panel-overlay" style="display: none;">
+        <div class="search-panel">
+            <div class="search-panel__header">
+                <h3>定型文</h3>
+                <button id="close-template-panel-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="search-panel__body">
+                <ul id="template-list" class="history-list"></ul>
+                <div class="template-form">
+                    <label for="template-input">新しい定型文</label>
+                    <textarea id="template-input" rows="3" placeholder="登録する文章を入力（範囲選択してから開くと選択中の文字が入ります）"></textarea>
+                    <button id="add-template-btn" class="btn">登録</button>
+                </div>
             </div>
         </div>
     </div>

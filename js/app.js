@@ -7,6 +7,7 @@ import { ClipboardHistoryManager } from './clipboardHistoryManager.js';
 import { SearchManager } from './searchManager.js';
 import { StorageManager } from './storageManager.js';
 import { TextTransformManager } from './textTransformManager.js';
+import { TemplateManager } from './templateManager.js';
 
 class ClipEditApp {
     constructor() {
@@ -74,6 +75,8 @@ class ClipEditApp {
             this.elements.selectionScopeCheckbox,
             this.elements.selectionScopeInfo
         );
+
+        this.templateManager = new TemplateManager(this.storageManager, STORAGE_KEYS.TEMPLATES);
 
         this.textTransformManager = new TextTransformManager(
             this.elements.editor,
@@ -261,6 +264,96 @@ class ClipEditApp {
             this.clipboardHistoryManager.clear();
             this.renderHistoryList();
             this.notificationManager.show('履歴を削除しました');
+        });
+
+        this.elements.templateBtn.addEventListener('click', () => {
+            this.openTemplatePanel();
+        });
+
+        this.elements.closeTemplatePanelBtn.addEventListener('click', () => {
+            this.elements.templatePanel.style.display = 'none';
+        });
+
+        this.elements.addTemplateBtn.addEventListener('click', () => {
+            const text = this.elements.templateInput.value;
+            if (!text.trim()) {
+                this.notificationManager.show('登録する文章を入力してください');
+                return;
+            }
+            if (this.templateManager.add(text)) {
+                this.elements.templateInput.value = '';
+                this.renderTemplateList();
+                this.notificationManager.show('定型文を登録しました');
+            } else {
+                this.notificationManager.show('同じ定型文が登録済みです');
+            }
+        });
+    }
+
+    openTemplatePanel() {
+        const { editor, templateInput, templatePanel } = this.elements;
+        // 挿入位置として、開いた時点のカーソル位置・選択範囲を控えておく
+        this.templateInsertRange = { start: editor.selectionStart, end: editor.selectionEnd };
+        // 範囲選択中なら、その文字を登録候補として入れておく
+        const selected = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+        templateInput.value = selected;
+        this.renderTemplateList();
+        templatePanel.style.display = 'flex';
+    }
+
+    insertTemplate(text) {
+        const { editor } = this.elements;
+        const { start, end } = this.templateInsertRange || { start: editor.value.length, end: editor.value.length };
+        editor.setRangeText(text, start, end, 'end');
+        this.updateStats();
+        this.historyManager.record(true);
+        this.storageManager.set(STORAGE_KEYS.EDITOR_CONTENT, editor.value);
+        this.elements.templatePanel.style.display = 'none';
+        this.notificationManager.show('定型文を挿入しました');
+    }
+
+    renderTemplateList() {
+        const list = this.elements.templateList;
+        const items = this.templateManager.getAll();
+        list.innerHTML = '';
+
+        if (items.length === 0) {
+            const emptyItem = document.createElement('li');
+            emptyItem.className = 'history-empty';
+            emptyItem.textContent = '定型文がありません';
+            list.appendChild(emptyItem);
+            return;
+        }
+
+        items.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.className = 'history-item';
+
+            const contentBtn = document.createElement('button');
+            contentBtn.type = 'button';
+            contentBtn.className = 'history-item__content';
+            contentBtn.title = item.text.slice(0, CONSTANTS.HISTORY_TOOLTIP_LENGTH);
+
+            const preview = document.createElement('span');
+            preview.className = 'history-item__preview';
+            preview.textContent = this.createPreviewText(item.text);
+            contentBtn.appendChild(preview);
+            contentBtn.addEventListener('click', () => this.insertTemplate(item.text));
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'history-item__delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.setAttribute('aria-label', '削除');
+            deleteBtn.addEventListener('click', () => {
+                if (!confirm('この定型文を削除しますか？')) return;
+                this.templateManager.remove(index);
+                this.renderTemplateList();
+            });
+
+            li.appendChild(contentBtn);
+            li.appendChild(deleteBtn);
+            list.appendChild(li);
         });
     }
 
