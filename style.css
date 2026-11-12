@@ -45,6 +45,16 @@ body {
     font-weight: 600;
 }
 
+.header__actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.header__actions .btn {
+    white-space: nowrap;
+}
+
 .main-container {
     padding-top: var(--header-height);
     padding-bottom: var(--toolbar-height);
@@ -118,6 +128,29 @@ body {
 
 .btn:active:not(:disabled) {
     background-color: #004bb5;
+}
+
+.btn--mode {
+    background-color: #ffffff;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.btn--mode:hover:not(:disabled),
+.btn--mode:active:not(:disabled) {
+    background-color: #eef5ff;
+}
+
+.btn--mode.btn--mode-active,
+.btn--mode.btn--mode-active:active:not(:disabled),
+.btn--mode.btn--mode-active:hover:not(:disabled) {
+    background-color: #ff9500;
+    border-color: #ff9500;
+    color: #ffffff;
+}
+
+#editor:read-only {
+    background-color: #fffaf0;
 }
 
 .btn:disabled {
@@ -383,6 +416,23 @@ body {
 
 /* --- モバイル向けレスポンシブ対応 --- */
 @media (max-width: 768px) {
+    .header {
+        padding: 0 10px;
+    }
+
+    .header__title {
+        font-size: 20px;
+    }
+
+    .header__actions {
+        gap: 6px;
+    }
+
+    .header__actions .btn {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+
     .toolbar {
         display: grid;
         grid-template-columns: repeat(3, 1fr);

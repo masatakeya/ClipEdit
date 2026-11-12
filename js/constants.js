@@ -12,6 +12,7 @@ export const CONSTANTS = {
 export const DOM_IDS = {
     editor: 'editor',
     pasteBtn: 'paste-btn',
+    modeToggleBtn: 'mode-toggle-btn',
     copyBtn: 'copy-btn',
     clearBtn: 'clear-btn',
     selectAllBtn: 'select-all-btn',
@@ -47,5 +48,6 @@ export const DOM_IDS = {
 
 export const STORAGE_KEYS = {
     EDITOR_CONTENT: 'clipedit_editor_content',
-    CLIPBOARD_HISTORY: 'clipedit_clipboard_history'
+    CLIPBOARD_HISTORY: 'clipedit_clipboard_history',
+    SELECT_MODE: 'clipedit_select_mode'
 };
