@@ -23,6 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # GitHub Pages はファイルを約10分キャッシュさせるため、新しい index.html と
+      # 古い JS/CSS が混ざって動かなくなることがある。読み込む URL にコミットIDを付けて防ぐ。
+      - name: Add cache-busting version to JS/CSS
+        run: |
+          VERSION="${GITHUB_SHA::8}"
+          sed -i -E "s#from '\./([A-Za-z0-9_]+)\.js'#from './\1.js?v=${VERSION}'#g" js/*.js
+          sed -i -E "s#'\./js/app\.js'#'./js/app.js?v=${VERSION}'#; s#href=\"style\.css\"#href=\"style.css?v=${VERSION}\"#" index.html
+          grep -n "?v=" index.html js/*.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
