@@ -100,7 +100,29 @@ class ClipEditApp {
         this.elements.statsBar.innerHTML = `<span>文字数: ${charCount}</span><span>行数: ${lineCount}</span>`;
     }
 
+    // 選択モード: readonly にしてキーボードを出さずに文字を選択できるようにする
+    setSelectMode(enabled) {
+        const { editor, modeToggleBtn } = this.elements;
+        editor.readOnly = enabled;
+        modeToggleBtn.textContent = enabled ? '選択中' : '編集中';
+        modeToggleBtn.setAttribute('aria-pressed', String(enabled));
+        modeToggleBtn.classList.toggle('btn--mode-active', enabled);
+        this.storageManager.set(STORAGE_KEYS.SELECT_MODE, enabled ? '1' : '0');
+        if (enabled && document.activeElement === editor) {
+            // 表示中のキーボードを閉じる（選択範囲は保持される）
+            editor.blur();
+        }
+    }
+
     bindEvents() {
+        this.elements.modeToggleBtn.addEventListener('click', () => {
+            const enabled = !this.elements.editor.readOnly;
+            this.setSelectMode(enabled);
+            this.notificationManager.show(enabled
+                ? '選択モード：キーボードを出さずに選択できます'
+                : '編集モード：文字を入力できます');
+        });
+
         this.elements.editor.addEventListener('input', () => {
             this.updateStats();
             this.historyManager.record();
@@ -136,7 +158,8 @@ class ClipEditApp {
                 this.afterPaste(text);
             } catch (error) {
                 console.log('Direct clipboard access failed:', error);
-                // フォールバック
+                // フォールバック（手動ペーストのため編集モードに戻す）
+                this.setSelectMode(false);
                 this.clipboardManager.fallbackPaste();
             }
         });
@@ -319,6 +342,7 @@ class ClipEditApp {
 
     init() {
         this.historyManager.init();
+        this.setSelectMode(this.storageManager.get(STORAGE_KEYS.SELECT_MODE) === '1');
 
         // Restore content from storage
         const savedContent = this.storageManager.get(STORAGE_KEYS.EDITOR_CONTENT);
